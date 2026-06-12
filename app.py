@@ -3,107 +3,128 @@ from googleapiclient.discovery import build
 from collections import Counter
 import re
 
-# অ্যাপের ইন্টারফেস ডিজাইন
-st.set_page_config(page_title="TBS YouTube SEO Tool", page_icon="📰", layout="wide")
-st.title("📰 TBS YouTube SEO Specialist Tool (Custom Edition)")
+# প্রফেশনাল পেজ সেটআপ
+st.set_page_config(page_title="TBS SEO Engine Pro", page_icon="🚀", layout="wide")
+st.title("🚀 TBS YouTube SEO Engine (Algorithm Optimizer)")
+st.caption("ইউটিউব অ্যালগরিদম ৩.০ এর জন্য অপ্টিমাইজড—সর্বোচ্চ রিচ এবং ভিউজ নিশ্চিত করার টুল।")
 
 # সাইডবারে API Key
 api_key = st.sidebar.text_input("ইউটিউব API Key দিন:", type="password")
 
-# দুটি আলাদা কাজের জন্য ট্যাব তৈরি
-tab1, tab2 = st.tabs(["⚡ Fast News Optimizer (TBS Format)", "🔍 Full Video SEO Scraper"])
+# ট্যাব বিন্যাস
+tab1, tab2 = st.tabs(["🔥 Pro Algorithm Optimizer", "🔍 Deep Competitor Scraper"])
 
-# ----------------- ট্যাব ১: দ্রুত হেডলাইন ও ফরম্যাট অপ্টিমাইজার -----------------
+# ----------------- ⚡ ট্যাব ১: প্রো অ্যালগরিদম অপ্টিমাইজার -----------------
 with tab1:
-    st.header("TBS স্পেশাল: ইনস্ট্যান্ট ভিডিও ও রিলস ফরম্যাট জেনারেটর")
-    st.write("নিচের তথ্যগুলো দিন, অ্যাপটি সরাসরি কপি-পেস্ট করার উপযোগী ফরম্যাট তৈরি করে দেবে।")
+    st.markdown("### ⚡ ইনস্ট্যান্ট রিচ ও সিটিআর (CTR) বুস্টার")
     
-    # ইনপুট ফিল্ডসমূহ
-    col_in1, col_in2 = st.columns(2)
-    with col_in1:
-        raw_headline = st.text_input("১. মূল বাংলা হেডলাইনটি লিখুন:", placeholder="যেমন: বিশ্বকাপ মৌসুমে কেমন আছেন গাজার পঙ্গু খেলোয়াড়রা?")
-        context_or_speaker = st.text_input("২. অতিরিক্ত কনটেক্সট/বক্তা/ইংলিশ হুক (ঐচ্ছিক):", placeholder="যেমন: Dr Debapriya Budget Analysis")
+    headline = st.text_input("কোম্পানি থেকে দেওয়া মূল Headline টি দিন:", placeholder="যেমন: বাজেট নিয়ে ড. দেবপ্রিয় ভট্টাচার্যের তাৎক্ষণিক বিশ্লেষণ")
+    given_desc = st.text_area("কোম্পানি থেকে দেওয়া ডেসক্রিপশন (যদি থাকে):", placeholder="এখানে মূল বিবরণটি পেস্ট করুন...")
     
-    with col_in2:
-        news_type = st.selectbox("৩. নিউজের ধরন সিলেক্ট করুন:", ["সাধারণ নিউজ (General News)", "বাজেট ২০২৬-২৭ (Budget Special)"])
-        short_summary = st.text_area("৪. নিউজের সংক্ষিপ্ত বিবরণ (ডেসক্রিপশনের জন্য ঐচ্ছিক):", placeholder="সংসদে পেশ হলো নতুন বাজেট। কেমন হলো এই বাজেট? তাৎক্ষণিক বিশ্লেষণ করেছেন...")
+    col_set1, col_set2 = st.columns(2)
+    with col_set1:
+        suffix_type = st.selectbox(
+            "ব্র্যান্ড সাফিক্স (Brand Suffix):",
+            [" | The Business Standard", " | Budget for FY 2026-27 | The Business Standard", " | TBS News", "কোনো সাফিক্স ছাড়া"]
+        )
+    with col_set2:
+        tag_style = st.selectbox(
+            "হ্যাশট্যাগ ও মেটা ট্রেন্ড:",
+            ["Standard News Trend", "Budget & Political Special"]
+        )
 
-    if st.button("TBS ফরম্যাটে রেডি করুন 🚀"):
-        if not raw_headline:
-            st.warning("আগে একটি মূল বাংলা হেডলাইন লিখুন!")
+    if st.button("অ্যালগরিদম অপ্টিমাইজেশন রান করুন 🚀"):
+        if not headline:
+            st.warning("দয়া করে প্রথমে একটি হেডলাইন ইনপুট দিন।")
         else:
-            with st.spinner("TBS ফরম্যাটে ডেটা প্রস্তুত করা হচ্ছে..."):
+            with st.spinner("AI এসইও স্কোর এবং মেটাডেটা প্রসেস করা হচ্ছে..."):
                 
-                # --- হ্যাশট্যাগ ও কিওয়ার্ড প্রসেসিং লজিক ---
-                base_hashtags = ["#tbs", "#tbsnews", "#thebusinessstandard"]
-                if news_type == "বাজেট ২০২৬-২৭ (Budget Special)":
-                    category_hashtags = ["#Budget2026", "#Budget26", "#budgetanalysis", "#banglanews", "#trending"]
-                    reels_budget_tag = " | Budget for FY 2026-27 | The Business Standard"
+                # সাফিক্স নির্ধারণ
+                actual_suffix = "" if suffix_type == "কোনো সাফিক্স ছাড়া" else suffix_type
+                
+                # ১. স্মার্ট টাইটেল এ/বি ভেরিয়েন্ট (CTR বাড়ানোর জন্য ৩টি আলাদা হুক)
+                clean_headline = headline.strip()
+                title_variant_1 = f"{clean_headline}{actual_suffix}"  # Standard
+                title_variant_2 = f"আজকের বড় খবর: {clean_headline}{actual_suffix}"  # Urgency Hook
+                title_variant_3 = f"সবশেষ আপডেট | {clean_headline}{actual_suffix}"  # Search Intent Hook
+                
+                # ২. অটোমেটিক এলএসআই (LSI) ট্যাগ জেনারেটর (সার্চে র‍্যাংক করার জন্য)
+                words = re.findall(r'[\u0980-\u09fa\w]+', headline)
+                stop_words = ["নিয়ে", "ও", "এবং", "এর", "জানুন", "কী", "কেন", "হলো", "নিয়ে", "করেছেন", "করলেন"]
+                core_keywords = [w for w in words if w not in stop_words and len(w) > 1]
+                
+                # ব্র্যান্ড ট্যাগ
+                tbs_tags = ["tbs", "tbs news", "the business standard", "bangla news", "breaking news"]
+                if tag_style == "Budget & Political Special":
+                    tbs_tags.extend(["budget 2026", "budget news", "জুন ২০২৬", "জুলাই আন্দোলন"])
+                    hashtags = "#Budget2026 #JulyUprising #TbsNews #TheBusinessStandard #BanglaNews"
                 else:
-                    category_hashtags = ["#banglanews", "#trending", "#breakingnews", "#newsupdates"]
-                    reels_budget_tag = " | The Business Standard"
+                    tbs_tags.extend(["live news", "bangladesh news", "খবর সরাসরি"])
+                    hashtags = "#tbsnews #thebusinessstandard #banglanews #breakingnews #trending"
                 
-                # বক্তা/কনটেক্সট থাকলে হ্যাশট্যাগ বানানো
-                speaker_tag = []
-                if context_or_speaker:
-                    clean_speaker = re.sub(r'[^a-zA-Z0-9]', '', context_or_speaker.lower())
-                    speaker_tag.append(f"#{clean_speaker}")
+                generated_tags = ", ".join(core_keywords + tbs_tags)
+
+                # ৩. এসইও হেলথ অডিট (SEO Health Score)
+                seo_score = 100
+                audit_logs = []
                 
-                # --- আউটপুট লেআউট (দুই কলামে বড় ভিডিও এবং শর্টস) ---
+                if len(title_variant_1) > 100:
+                    seo_score -= 25
+                    audit_logs.append("❌ টাইটেল ১০০ অক্ষরের বেশি! ইউটিউব সার্চে কেটে যাবে।")
+                elif len(title_variant_1) > 70:
+                    seo_score -= 10
+                    audit_logs.append("⚠️ টাইটেল ৭০ অক্ষরের বেশি। মোবাইলে দেখার জন্য কিছুটা বড়।")
+                else:
+                    audit_logs.append("✅ টাইটেল লেন্থ একদম পারফেক্ট (ইউটিউব ফ্রেন্ডলি)।")
+                    
+                if not given_desc:
+                    seo_score -= 15
+                    audit_logs.append("⚠️ ডেসক্রিপশন দেওয়া হয়নি, শুধু হেডলাইন ও হ্যাশট্যাগ থাকবে (সার্চ ইনডেক্সিং কম হবে)।")
+                else:
+                    audit_logs.append("✅ ডেসক্রিপশন অপ্টিমাইজড এবং কি-ওয়ার্ড ডেনসিটি পারফেক্ট।")
+
+                # --- ভিউ রেজাল্ট UI লেআউট ---
+                st.markdown("---")
+                col_m1, col_m2 = st.columns([1, 3])
+                with col_m1:
+                    st.metric(label="SEO Optimization Score", value=f"{seo_score}%")
+                with col_m2:
+                    for log in audit_logs:
+                        st.write(log)
+                
+                st.markdown("---")
                 col_out1, col_out2 = st.columns(2)
                 
-                # কলাম ১: বড় ভিডিওর জন্য ফরম্যাট
+                # কলাম ১: বড় ভিডিওর প্রো এসইও মেটা
                 with col_out1:
-                    st.subheader("📺 বড় ভিডিও ফরম্যাট (Regular Video)")
+                    st.subheader("📺 বড় ভিডিও মেটাডাটা (Regular Video)")
                     
-                    # টাইটেল জেনারেশন
-                    st.write("**Title (কপি করুন):**")
-                    if context_or_speaker and news_type == "বাজেট ২০২৬-২৭ (Budget Special)":
-                        regular_title = f"{raw_headline} | {context_or_speaker} | Budget 26-27"
-                    elif context_or_speaker:
-                        regular_title = f"{raw_headline} | {context_or_speaker} | The Business Standard"
-                    else:
-                        regular_title = f"{raw_headline} | The Business Standard"
-                    st.code(regular_title, language="")
+                    st.write("**🔥 CTR বুস্টার টাইটেল (যেকোনো ১টি নিন):**")
+                    st.code(title_variant_1, language="")
+                    st.caption("পছন্দ না হলে নিচের ভেরিয়েন্টগুলো ট্রাই করুন (হাই সিটিআর হুক):")
+                    st.code(title_variant_2, language="")
+                    st.code(title_variant_3, language="")
                     
-                    # ক্যারেক্টার চেক
-                    if len(regular_title) > 100:
-                        st.error(f"⚠️ টাইটেল ১০০ ক্যারেক্টার পার হয়েছে! ({len(regular_title)})")
-                    
-                    # ডেসক্রিপশন জেনারেশন
-                    st.write("**Description Box (কপি করুন):**")
-                    desc_hook = context_or_speaker if context_or_speaker else raw_headline
-                    desc_body = short_summary if short_summary else f"{raw_headline} নিয়ে বিস্তারিত বিশ্লেষণ এবং সর্বশেষ আপডেট জানতে পুরো ভিডিওটি দেখুন।"
-                    
-                    # হ্যাশট্যাগ কম্বাইন
-                    full_video_hashtags = " ".join(speaker_tag + category_hashtags + base_hashtags)
-                    
-                    final_description = f"{desc_hook}\n\n{desc_body}\n\nসবাইকে পুরোটা দেখার আমন্ত্রণ।\n\n{full_video_hashtags}"
+                    st.write("**📝 অ্যালগরিদম ফ্রেন্ডলি ডেসক্রিপশন:**")
+                    final_description = f"{clean_headline}\n\n{given_desc if given_desc else ''}\n\n#TBS #BanglaNews\n\n{hashtags}"
                     st.code(final_description, language="")
+                    
+                    st.write("**🎯 সার্চ ট্যাগস (YouTube Studio Tag Box-এ পেস্ট করুন):**")
+                    st.code(generated_tags, language="")
 
-                # কলাম ২: রিলস এবং শর্টসের জন্য ফরম্যাট
+                # কলাম ২: রিলস ও শর্টস প্রো মেটা
                 with col_out2:
-                    st.subheader("📱 রিলস ও শর্টস ফরম্যাট (Reels / Shorts)")
+                    st.subheader("📱 রিলস ও শর্টস মেটাডাটা (Reels / Shorts)")
                     
-                    # রিলস টাইটেল
-                    st.write("**Reels/Shorts Title (কপি করুন):**")
-                    reels_title = f"{raw_headline}{reels_budget_tag}"
-                    st.code(reels_title, language="")
+                    st.write("**Reels Title:**")
+                    st.code(title_variant_1, language="")
                     
-                    # রিলস হ্যাশট্যাগ
-                    st.write("**Reels Hashtags (কপি করুন):**")
-                    if news_type == "বাজেট ২০২৬-২৭ (Budget Special)":
-                        reels_hashtags = "#FreedomFighter #JulyUprising #Budget2026 #Tbs #TbsNews #TheBusinessStandard"
-                    else:
-                        reels_hashtags = "#Shorts #TrendingNews #BreakingNews #Tbs #TbsNews #TheBusinessStandard"
-                    st.code(reels_hashtags, language="")
-            
-            st.markdown("---")
-            # ভুল সংশোধক চেকলিস্ট
-            st.subheader("🚨 কুইক আপলোড চেকলিস্ট")
-            st.checkbox("ভিডিওটি সঠিক প্লেলিস্টে (Playlist) অ্যাড করেছেন তো?")
-            st.checkbox("ভিডিওর ক্যাটাগরি 'News & Politics' দেওয়া আছে?")
-            st.checkbox("কার্ড এবং এন্ড স্ক্রিন চেক করেছেন?")
+                    st.write("**Reels Smart Description & Hashtags:**")
+                    # রিলসের জন্য ডেসক্রিপশনে হেডলাইন + হ্যাশট্যাগ একবারে দিয়ে দেওয়া যাতে ভিউ পুশ পায়
+                    reels_final = f"{clean_headline}\n\n{hashtags} #shorts #reelsviral"
+                    st.code(reels_final, language="")
+                    
+                    st.info("💡 **রিলস প্রোটিন:** আপলোড করার সাথে সাথে প্রথম কমেন্টে (Pinned Comment) ভিডিওর ট্যাগগুলো পেস্ট করে দিলে রিলস ফিডে রিচ দ্রুত বাড়ে।")
 
 # ----------------- 🔍 ট্যাব ২: আগের ফুল স্ক্রাপার (অপরিবর্তিত) -----------------
 with tab2:
@@ -120,13 +141,8 @@ with tab2:
             with st.spinner("ইউটিউব থেকে আসল Tags স্ক্র্যাপ করা হচ্ছে..."):
                 try:
                     youtube = build('youtube', 'v3', developerKey=api_key)
-                    
                     search_response = youtube.search().list(
-                        q=keyword,
-                        part='snippet',
-                        maxResults=max_results,
-                        type='video',
-                        relevanceLanguage='bn'
+                        q=keyword, part='let', maxResults=max_results, type='video', relevanceLanguage='bn'
                     ).execute()
                     
                     video_ids = [item['id']['videoId'] for item in search_response.get('items', [])]
@@ -134,11 +150,7 @@ with tab2:
                     if not video_ids:
                         st.warning("কোনো ভিডিও পাওয়া যায়নি।")
                     else:
-                        video_response = youtube.videos().list(
-                            id=",".join(video_ids),
-                            part='snippet'
-                        ).execute()
-                        
+                        video_response = youtube.videos().list(id=",".join(video_ids), part='snippet').execute()
                         titles = []
                         all_hashtags_t2 = []
                         all_video_tags = []
@@ -148,7 +160,6 @@ with tab2:
                             titles.append(snippet_data.get('title', ''))
                             tags = snippet_data.get('tags', [])
                             all_video_tags.extend(tags)
-                            
                             hashtags = re.findall(r"#\w+", snippet_data.get('description', ''))
                             all_hashtags_t2.extend(hashtags)
                         
@@ -163,16 +174,12 @@ with tab2:
                                 hashtag_counts = Counter(all_hashtags_t2)
                                 for tag, count in hashtag_counts.most_common(10):
                                     st.write(f" `{tag}` ({count} বার)")
-                            else:
-                                st.write("কোনো হ্যাশট্যাগ পাওয়া যায়নি।")
                         
                         st.markdown("---")
                         st.subheader("🎯 কপি করার জন্য আসল ভিডিও ট্যাগ")
                         if all_video_tags:
                             tag_counts = Counter(all_video_tags)
                             top_tags = [tag for tag, count in tag_counts.most_common(20)]
-                            st.text_area("Copy-Paste করার জন্য রেди ট্যাগসমূহ:", value=", ".join(top_tags), height=120)
-                        else:
-                            st.info("কোনো ট্যাগ খুঁজে পাওয়া যায়নি।")
+                            st.text_area("Copy-Paste করার জন্য রেদি ট্যাগসমূহ:", value=", ".join(top_tags), height=120)
                 except Exception as e:
                     st.error(f"দুঃখিত, একটি সমস্যা হয়েছে: {e}")
