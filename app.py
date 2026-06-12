@@ -40,10 +40,10 @@ if st.button("SEO এনালাইসিস শুরু করুন 🚀"):
                 if not video_ids:
                     st.warning("এই কিওয়ার্ড দিয়ে কোনো ভিডিও পাওয়া যায়নি।")
                 else:
-                    # ২য় ধাপ: ভিডিও আইডি ব্যবহার করে তাদের আসল Tags এবং ডেসক্রিপশন বের করা
+                    # ২য় ধাপ: ভিডিও আইডি ব্যবহার করে তাদের ডাটা বের করা (ফিক্সড লাইন)
                     video_response = youtube.videos().list(
                         id=",".join(video_ids),
-                        part='snippet,tags'
+                        part='snippet' # এখানে শুধু 'snippet' হবে, কারণ tags এর ভেতরেই থাকে
                     ).execute()
                     
                     titles = []
@@ -51,9 +51,10 @@ if st.button("SEO এনালাইসিস শুরু করুন 🚀"):
                     all_video_tags = []
                     
                     for item in video_response.get('items', []):
-                        title = item['snippet']['title']
-                        desc = item['snippet']['description']
-                        tags = item.get('tags', []) # এটিই হলো আসল ভিডিও ট্যাগ লিস্ট
+                        snippet_data = item.get('snippet', {})
+                        title = snippet_data.get('title', '')
+                        desc = snippet_data.get('description', '')
+                        tags = snippet_data.get('tags', []) # snippet থেকে সেফলি ট্যাগ নেওয়া হচ্ছে
                         
                         titles.append(title)
                         all_video_tags.extend(tags)
@@ -87,7 +88,7 @@ if st.button("SEO এনালাইসিস শুরু করুন 🚀"):
                         # ট্যাগগুলোর ফ্রিকোয়েন্সি কাউন্ট করা
                         tag_counts = Counter(all_video_tags)
                         
-                        # সবচেয়ে বেশি ব্যবহার হওয়া সেরা ২০টি ট্যাগ নেওয়া
+                        # chimneys বা অপ্রয়োজনীয় ডুপ্লিকেট বাদ দিয়ে সেরা ২০টি ট্যাগ নেওয়া
                         top_tags = [tag for tag, count in tag_counts.most_common(20)]
                         
                         # কমা দিয়ে সেপারেট করে রেডি ফরম্যাট তৈরি
