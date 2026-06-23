@@ -52,6 +52,9 @@ def call_ai(prompt: str) -> str:
     Groq অথবা Gemini এ প্রম্পট পাঠিয়ে টেক্সট রেসপন্স আনে।
     """
     max_retries = 3
+    
+    # Cloudflare 403 Forbidden এরর এড়াতে ব্রাউজার হেডার যোগ করা হয়েছে
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
     if using_groq:
         url = "https://api.groq.com/openai/v1/chat/completions"
@@ -64,11 +67,15 @@ def call_ai(prompt: str) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {clean_groq_key}",
+            "User-Agent": user_agent
         }
     else:
         url = f"https://generativelanguage.googleapis.com/v1/models/{clean_model_type}:generateContent?key={clean_gemini_key}"
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": user_agent
+        }
 
     last_error = None
     for attempt in range(max_retries):
