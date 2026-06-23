@@ -117,7 +117,7 @@ with tab1:
 
     if st.button("🧠 সুপার ব্রেন অপ্টিমাইজেশন রান করুন 🚀"):
         if not headline:
-            st.warning("আগে একটি হেডライン ইনপুট দিন!")
+            st.warning("আগে একটি হেডলাইন ইনপুট দিন!")
         elif using_groq and not clean_groq_key:
             st.error("দয়া করে বাম পাশের সাইডবারে আপনার Groq API Key টি দিন।")
         elif (not using_groq) and not clean_gemini_key:
@@ -209,7 +209,17 @@ with tab1:
                     }
 
                 except urllib.error.HTTPError as he:
-                    st.error(f"❌ AI API Key বা সার্ভার জনিত সমস্যা (Error {he.code})। দয়া করে আপনার ইনপুটকৃত API Key টি চেক করুন।")
+                    try:
+                        err_body = json.loads(he.read().decode('utf-8'))
+                        if "error" in err_body and isinstance(err_body["error"], dict):
+                            error_msg = err_body["error"].get("message", str(err_body))
+                        else:
+                            error_msg = str(err_body)
+                    except:
+                        error_msg = "সার্ভার থেকে কোনো অতিরিক্ত মেসেজ পাওয়া যায়নি।"
+                    
+                    st.error(f"❌ AI সার্ভার এরর এসেছে! [Error Code: {he.code}]")
+                    st.info(f"📋 সার্ভার থেকে পাওয়া আসল কারণ: {error_msg}")
                 except Exception as e:
                     st.error(f"সাধারণ সমস্যা: {e}")
 
