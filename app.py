@@ -1,177 +1,316 @@
 import streamlit as st
 from googleapiclient.discovery import build
-from collections import Counter
 import re
+import time
 import urllib.request
 import urllib.parse
+import urllib.error
 import json
+from collections import Counter
 
-# প্রফেশনাল পেজ সেটআপ
-st.set_page_config(page_title="TBS YouTube SEO Engine Ultra", page_icon="📰", layout="wide")
-st.title("🚀 TBS YouTube SEO Engine (Autocomplete API Integrated)")
+# পেজ সেটআপ
+st.set_page_config(page_title="TBS Sovereign Agent 3.0", page_icon="🧠", layout="wide")
+st.title("🧠 TBS Sovereign SEO Agent 3.0 (Super Brain Edition)")
+st.caption("Groq / Google Gemini AI এবং YouTube Live Search API দ্বারা চালিত সর্বাধুনিক অটো-পাইলট engine।")
 
-# সাইডবারে API Key
-api_key = st.sidebar.text_input("ইউটিউব API Key দিন:", type="password")
+# সাইডবার কন্ট্রোল প্যানেল
+st.sidebar.header("🔑 AI Brain Activation")
 
-# দুটি আলাদা কাজের জন্য ট্যাব তৈরি
-tab1, tab2 = st.tabs(["⚡ Fast Copy-Paste Optimizer", "🔍 Deep Competitor Scraper"])
+ai_provider = st.sidebar.radio(
+    "🤖 AI Provider বেছে নিন:",
+    ["Groq (ফ্রি, বেশি কোটা ⭐ Recommended)", "Google Gemini"]
+)
+using_groq = ai_provider.startswith("Groq")
 
-# ----------------- ⚡ ট্যাব ১: সুপার ফাস্ট কপি-পেস্ট অপ্টিমাইজার -----------------
-with tab1:
-    st.markdown("### ⚡ টিবিএস অটো-অপ্টিমাইজার (Smart Suffix & Live Search Suggestions)")
-    st.write("হেডলাইন ও ডেসক্রিপশন দিন। অ্যাপ নিজে থেকে ক্যারেক্টার লিমিট বুঝে সাফিক্স ও রিয়েল-টাইম সার্চ ট্যাগ রেডি করবে।")
-    
-    headline = st.text_input("১. কোম্পানি থেকে দেওয়া মূল Headline টি দিন:", placeholder="যেমন: প্রতিরক্ষায় আরও শক্তিশালী হবে বাংলাদেশ")
-    given_desc = st.text_area("২. কোম্পানি থেকে দেওয়া Description টি এখানে পেস্ট করুন (হুবহু থাকবে):", placeholder="কোম্পানির দেওয়া বিবরণটি এখানে দিন...")
+if using_groq:
+    groq_key = st.sidebar.text_input("Groq API Key দিন (ফ্রি - console.groq.com):", type="password")
+    gemini_key = ""
+    model_type = st.sidebar.selectbox(
+        "🤖 Groq Model সিলেক্ট করুন:",
+        ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "qwen/qwen3-32b", "llama-3.1-8b-instant"]
+    )
+    st.sidebar.caption("ফ্রি অ্যাকাউন্টে কার্ড লাগবে না। console.groq.com → Sign up → API Keys থেকে কী নিন।")
+else:
+    gemini_key = st.sidebar.text_input("Gemini AI Key দিন (ফ্রি):", type="password")
+    groq_key = ""
+    model_type = st.sidebar.selectbox(
+        "🤖 Gemini Model সিলেক্ট করুন:",
+        ["gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-2.5-flash"]
+    )
 
-    if st.button("ইনস্ট্যান্ট প্রো-ফরম্যাট তৈরি করুন 🚀"):
-        if not headline:
-            st.warning("আগে একটি হেডলাইন দিন!")
-        else:
-            headline_clean = headline.strip()
-            detected_keywords = []
-            
-            # স্মার্ট ক্যাটাগরি ও সাফিক্স ডিটেকশন
-            if any(x in headline_clean for x in ["প্রতিরক্ষা", "সেনাবাহিনী", "সামরিক", "অস্ত্র", "military", "army"]):
-                detected_keywords = ["Military", "Defense", "National Security"]
-            elif any(x in headline_clean for x in ["বাজেট", "অর্থনীতি", "টাকা", "অর্থ", "budget", "economy"]):
-                detected_keywords = ["Budget", "Economy", "Finance"]
-            elif any(x in headline_clean for x in ["জুলাই", "আندোলন", "বিপ্লব", "শহীদ", "যোদ্ধা", "uprising"]):
-                detected_keywords = ["July Uprising", "Bangladesh", "Protest"]
-            elif any(x in headline_clean for x in ["খেলা", "বিশ্বকাপ", "ক্রিকেট", "ফুটবল", "ম্যাচ", "sports"]):
-                detected_keywords = ["Sports", "Cricket", "Football"]
-            elif any(x in headline_clean for x in ["দুর্ঘটনা", "নিহত", "আগুন", "সড়ক", "accident"]):
-                detected_keywords = ["Accident", "Breaking News"]
-            
-            if not detected_keywords:
-                detected_keywords = ["Bangla News", "Latest Update"]
-            
-            suffix_words = " | ".join(detected_keywords)
-            
-            # --- ক্যারেক্টার লিমিট ও ব্র্যান্ডিং লজিক (নিখুঁত গণনা) ---
-            branding_long = " | The Business Standard"
-            branding_short = " | TBS News"
-            
-            # প্রথমে ফুল ট্রাই করা হবে
-            title_variant_1 = f"{headline_clean} | {suffix_words}{branding_long}"
-            branding_status = "✅ Long Branding Included"
-            
-            # ১০০ পার হলে শর্ট ব্র্যান্ডিং
-            if len(title_variant_1) > 100:
-                title_variant_1 = f"{headline_clean} | {suffix_words}{branding_short}"
-                branding_status = "⚠️ Short Branding Used (Space Constraint)"
-            
-            # তাও ১০০ পার হলে ব্র্যান্ডিং সম্পূর্ণ বাদ (আপনার শর্ত অনুযায়ী)
-            if len(title_variant_1) > 100:
-                title_variant_1 = f"{headline_clean} | {suffix_words}"
-                branding_status = "❌ Branding Removed to Fit 100 Char Limit!"
-                
-            # যদি শুধু হেডলাইন+সাফিক্সও ১০০ পার করে, তবে সাফিক্স ছোট করা হবে
-            if len(title_variant_1) > 100:
-                title_variant_1 = f"{headline_clean} | {detected_keywords[0]}"
-                
-            # একদম শেষ ভরসা হিসেবে শুধু হেডলাইন (যদি হেডলাইন নিজেই ১০০ এর কাছাকাছি হয়)
-            if len(title_variant_1) > 100:
-                title_variant_1 = headline_clean[:100]
-                branding_status = "❌ Headline Truncated to 100 Chars"
+api_key = st.sidebar.text_input("ইউটিউব Data API Key দিন:", type="password")
 
-            # --- ফ্রি ইউটিউব অটোকমপ্লিট এপিআই ইন্টিগ্রেশন (Reach বাড়ানোর জন্য) ---
-            words = re.findall(r'[\u0980-\u09fa\w]+', headline_clean)
-            stop_words = ["নিয়ে", "ও", "এবং", "এর", "জানুন", "কী", "কেন", "হলো", "নিয়ে", "করেছেন", "চলছে"]
-            core_keywords = [w for w in words if w not in stop_words and len(w) > 1]
-            
-            # এপিআই কল করার জন্য মূল সার্চ টার্ম নির্ধারণ
-            search_seed = core_keywords[0] if core_keywords else headline_clean
-            yt_suggestions = []
-            
-            try:
-                # ইউটিউব সার্চ সাজেশনের ফ্রি পাবলিক এন্ডপয়েন্ট
-                url = f"https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&hl=bn&q={urllib.parse.quote(search_seed)}"
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req) as response:
-                    res_data = json.loads(response.read().decode('utf-8', errors='ignore'))
-                    yt_suggestions = [item[0] for item in res_data[1]]
-            except Exception as e:
-                yt_suggestions = []
+# স্পেস ট্রিম করা নিশ্চিত করা
+clean_groq_key = groq_key.strip() if groq_key else ""
+clean_gemini_key = gemini_key.strip() if gemini_key else ""
+clean_api_key = api_key.strip() if api_key else ""
+clean_model_type = model_type.strip()
 
-            # --- লোয়ারকেস হ্যাশট্যাগ জেনারেটর ---
-            raw_hashtags = ["tbs", "tbsnews", "thebusinessstandard", "banglanews", "trending"]
-            for kw in detected_keywords:
-                raw_hashtags.insert(0, kw.replace(" ", "").lower())
-            final_hashtags_list = list(dict.fromkeys([tag.lower() for tag in raw_hashtags]))
-            formatted_hashtags = " ".join([f"#{tag}" for tag in final_hashtags_list[:6]])
 
-            # মেটা ট্যাগ কম্বিনেশন (ইউটিউব সার্চ সাজেশনের কিওয়ার্ড সহ)
-            tbs_defaults = ["tbs", "tbs news", "the business standard", "bangla news"]
-            all_combined_tags = list(dict.fromkeys(core_keywords + yt_suggestions[:5] + tbs_defaults))
-            generated_meta_tags = ", ".join(all_combined_tags)
+def call_ai(prompt: str) -> str:
+    """
+    Groq অথবা Gemini এ প্রম্পট পাঠিয়ে টেক্সট রেসপন্স আনে।
+    Rate-limit (429) এরর পেলে অটোমেটিক কয়েকবার রিট্রি করে।
+    """
+    max_retries = 3
 
-            # --- আউটপুট ডিসপ্লে ---
-            st.markdown("---")
-            col_out1, col_out2 = st.columns(2)
-            
-            # বড় ভিডিও
-            with col_out1:
-                st.subheader("📺 বড় ভিডিও (Regular Video)")
-                st.write("**AI Dynamic Title:**")
-                st.code(title_variant_1, language="")
-                st.caption(f"লেন্থ: {len(title_variant_1)}/100 ক্যারেক্টার | স্ট্যাটাস: {branding_status}")
-                
-                st.write("**Description Box (হুবহু কোম্পানির বিবরণ + লোয়ারকেস হ্যাশট্যাগ):**")
-                if given_desc:
-                    final_desc = f"{given_desc.strip()}\n\n{formatted_hashtags}"
+    if using_groq:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        payload = {
+            "model": clean_model_type,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 2048,
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {clean_groq_key}",
+        }
+    else:
+        url = f"https://generativelanguage.googleapis.com/v1/models/{clean_model_type}:generateContent?key={clean_gemini_key}"
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        headers = {"Content-Type": "application/json"}
+
+    last_error = None
+    for attempt in range(max_retries):
+        req = urllib.request.Request(
+            url, data=json.dumps(payload).encode("utf-8"), headers=headers
+        )
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                if using_groq:
+                    return res_data["choices"][0]["message"]["content"]
                 else:
-                    final_desc = f"{headline_clean}\n\n{formatted_hashtags}"
-                st.code(final_desc, language="")
-                
-                st.write("**🎯 সার্চ ট্যাগস (YouTube Autocomplete API থেকে প্রাপ্ত উচ্চ ভিউজ ট্যাগস):**")
-                st.code(generated_meta_tags, language="")
+                    return res_data["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as he:
+            last_error = he
+            if he.code == 429 and attempt < max_retries - 1:
+                retry_after = he.headers.get("Retry-After")
+                wait_time = float(retry_after) if retry_after else (2 ** attempt) * 5
+                st.warning(
+                    f"⏳ কোটা লিমিটে পড়েছেন, {wait_time:.0f} সেকেন্ড পর অটোমেটিক রিট্রি হচ্ছে... "
+                    f"(চেষ্টা {attempt + 1}/{max_retries})"
+                )
+                time.sleep(wait_time)
+                continue
+            else:
+                raise
+    if last_error:
+        raise last_error
+    raise RuntimeError("AI থেকে কোনো রেসপন্স পাওয়া যায়নি।")
 
-            # রিলস ও শর্টস
-            with col_out2:
-                st.subheader("📱 রিলস ও শর্টস (Reels / Shorts)")
-                st.write("**Reels Title:**")
-                st.code(title_variant_1, language="")
-                
-                st.write("**Reels Lowercase Hashtags:**")
-                st.code(formatted_hashtags, language="")
-                
-                if yt_suggestions:
-                    st.write("**🔥 এই মুহূর্তে ইউটিউবে এই টপিকের ট্রেন্ডিং সার্চসমূহ:**")
-                    for sug in yt_suggestions[:5]:
-                        st.write(f"• `{sug}`")
-                        
-            st.success("🔥 প্রো-অ্যালগরিদম এবং ফ্রি সাজেস্ট এপিআই সফলভাবে রান করেছে!")
 
-# ----------------- 🔍নোট: ফিক্সড ট্যাব ২ (Deep Competitor Scraper) -----------------
+# 🧠 স্ট্রিমলিট লাইভ মেমোরি লক (যাতে টিক দিলে ডেটা না হারায়)
+if 'ai_output' not in st.session_state:
+    st.session_state['ai_output'] = None
+
+# 🖥️ ট্যাব বিন্যাস
+tab1, tab2 = st.tabs(["⚡ Super Brain Optimizer", "🔍 Deep Competitor Scraper"])
+
+# ----------------- ⚡ ট্যাব ১: সুপার ব্রেন অপ্টিমাইজার -----------------
+with tab1:
+    st.markdown("### 📥 সেন্ট্রাল ডেটা ইনপুট হাব")
+
+    headline = st.text_input("১. কোম্পানি থেকে দেওয়া মূল Headline বা নিউজ কনটেক্সট দিন:", placeholder="যেমন: প্রতিরক্ষায় আরও শক্তিশালী হবে বাংলাদেশ")
+    given_desc = st.text_area("২. কোম্পানি থেকে দেওয়া বিবরণ (Description/Article Body):", placeholder="এখানে বিবরণটি পেস্ট করুন...")
+    given_eng_headline = st.text_input("৩. কোম্পানি থেকে দেওয়া English Headline (ঐচ্ছিক - থাকলে দিন, না থাকলে ফাঁকা রাখুন):", placeholder="যেমন: Journalist Allegedly Assaulted at Jamaat Rally in Dhanmondi")
+
+    if st.button("🧠 সুপার ব্রেন অপ্টিমাইজেশন রান করুন 🚀"):
+        if not headline:
+            st.warning("আগে একটি হেডলাইন ইনপুট দিন!")
+        elif using_groq and not clean_groq_key:
+            st.error("দয়া করে বাম পাশের সাইডবারে আপনার ফ্রি Groq API Key টি দিন (console.groq.com)।")
+        elif (not using_groq) and not clean_gemini_key:
+            st.error("দয়া করে বাম পাশের সাইডবারে আপনার ফ্রি Gemini AI Key টি দিন।")
+        else:
+            with st.spinner(f"AI ({clean_model_type}) আপনার নিউজ অ্যানালাইসিস করছে..."):
+
+                # এআই প্রম্পট - হাই কোয়ালিটি এনটিটি-ভিত্তিক এসইও এবং চ্যানেল সেফটি রুলস সহ
+                prompt = f"""
+                Act as an elite YouTube News SEO Specialist and Google News SEO Expert for 'The Business Standard (TBS)'.
+                Analyze the provided headline and script context to generate hyper-targeted, high-CTR metadata assets for maximum reach.
+
+                CRITICAL POLICY SAFETY RULE: Do NOT include generic, trending but completely irrelevant news tags (such as Trump, Iran, Ukraine, war, etc.) if they are completely unrelated to this local news piece. Misleading tags cause YouTube community guidelines strikes and account termination. Keep keywords hyper-focused ONLY on the actual entities present in the news context.
+
+                Current Context: Year 2026 Search Trends. All hashtags MUST be 100% lowercase with no spaces.
+
+                News Headline: {headline}
+                News Description: {given_desc}
+                English Headline Provided: {given_eng_headline if given_eng_headline else "None"}
+
+                Strict Output Rules:
+                Your response must contain these exact section markers:
+                [SUFFIX]: 2 or 3 clean, high-intent English keywords/entities separated by pipes based on context (e.g., | Dhanmondi 32 | Jamaat Rally | Latest News).
+                [CONTEXT_HASHTAGS]: 2 or 3 completely lowercase viral hashtags separated by spaces related specifically to the news context (DO NOT include brand names like tbs).
+                [KEYWORDS]: Generate a massive list of 20 high-quality, highly searched viral semantic keywords/tags separated by commas. Maximize the quantity to fill the YouTube tag box efficiently while staying 100% relevant to the entities in the text.
+                [COMMUNITY]: A catchy text for YouTube Community Post with hook question, summary, and a 4-option Poll suggestion.
+                [FB_TITLE]: A punchy, click-friendly title optimized specifically for Facebook audience.
+                """
+
+                try:
+                    ai_response = call_ai(prompt)
+
+                    # --- ডাটা পার্সিং লজিক ---
+                    def extract_section(marker, text):
+                        pattern = rf"\[{marker}\]:(.*?)(?=\[\w+\]|\Z)"
+                        match = re.search(pattern, text, re.DOTALL)
+                        if match:
+                            return match.group(1).strip()
+                        try:
+                            return text.split(f"[{marker}]:")[1].split("[")[0].strip()
+                        except:
+                            return ""
+
+                    ai_suffix = extract_section("SUFFIX", ai_response)
+                    context_hashtags = extract_section("CONTEXT_HASHTAGS", ai_response)
+                    ai_keywords = extract_section("KEYWORDS", ai_response)
+                    comm_post = extract_section("COMMUNITY", ai_response)
+                    fb_title = extract_section("FB_TITLE", ai_response)
+
+                    # --- পাইথন রুল ইঞ্জিন (আপনার গাইডলাইন অনুযায়ী শতভাগ ফরম্যাটিং) ---
+                    headline_clean = headline.strip()
+                    desc_clean = given_desc.strip() if given_desc else headline_clean
+                    eng_headline_clean = given_eng_headline.strip() if given_eng_headline else ""
+
+                    # ১. হ্যাশট্যাগ পজিশনিং: ট্রেন্ডিং হ্যাশট্যাগ আগে + ৩টি অফিশিয়াল ব্র্যান্ড হ্যাশট্যাগ একদম সবার শেষে
+                    brand_hashtags = "#tbsnews #thebusinessstandard #tbs"
+                    if context_hashtags:
+                        final_shared_hashtags = f"{context_hashtags.lower()} {brand_hashtags}"
+                    else:
+                        final_shared_hashtags = brand_hashtags
+
+                    # ২. টাইটেল ১০০ ক্যারেক্টার সিকিউরিটি লজিক
+                    suffix_formatted = f" {ai_suffix}" if ai_suffix else ""
+                    yt_title = f"{headline_clean}{suffix_formatted} | The Business Standard"
+                    if len(yt_title) > 100:
+                        yt_title = f"{headline_clean}{suffix_formatted} | TBS News"
+                    if len(yt_title) > 100:
+                        yt_title = f"{headline_clean}{suffix_formatted}"
+                    if len(yt_title) > 100:
+                        yt_title = headline_clean[:100]
+
+                    # ৩. কাস্টম ডেসক্রিপশন স্ট্রাকচার (ইংলিশ লাইন না থাকলে স্কিপ হবে অটোমেটিক)
+                    if eng_headline_clean:
+                        yt_description = f"{eng_headline_clean}\n\n{desc_clean}\n\n{final_shared_hashtags}"
+                    else:
+                        yt_description = f"{desc_clean}\n\n{final_shared_hashtags}"
+
+                    fb_post_text = f"{headline_clean}\n\n{final_shared_hashtags}"
+                    tiktok_post_text = f"{headline_clean}\n{desc_clean}\n\n{final_shared_hashtags}"
+
+                    # ৪. ম্যাক্সিমাম কোয়ালিটি ট্যাগ বক্স (বাংলা হেডলাইন + ইংলিশ হেডলাইন + ব্র্যান্ড ট্যাগ + ২০টি সেফ কিওয়ার্ডস)
+                    brand_tags = "tbs, tbs news, the business standard"
+                    if eng_headline_clean:
+                        yt_tags_box = f"{headline_clean}, {eng_headline_clean}, {brand_tags}, {ai_keywords}"
+                    else:
+                        yt_tags_box = f"{headline_clean}, {brand_tags}, {ai_keywords}"
+
+                    # ৫০০ অক্ষরের অতিরিক্ত অংশ ছাঁটাই করা (ইউটিউব এরর সেফটি)
+                    yt_tags_box = yt_tags_box[:495]
+
+                    # লাইভ মেমোরি স্টেটে ডেটা সেভ (লক)
+                    st.session_state['ai_output'] = {
+                        "yt_title": yt_title,
+                        "yt_tags": yt_tags_box,
+                        "yt_desc": yt_description,
+                        "fb_text": fb_post_text,
+                        "tt_text": tiktok_post_text,
+                        "comm_post": comm_post
+                    }
+
+                except urllib.error.HTTPError as he:
+                    try:
+                        err_body = json.loads(he.read().decode('utf-8'))
+                        if using_groq:
+                            msg = err_body.get('error', {}).get('message', 'Unknown Issue')
+                        else:
+                            msg = err_body.get('error', {}).get('message', 'Unknown Issue')
+                        st.error(f"❌ AI সার্ভার এরর ({he.code}): {msg}")
+                    except:
+                        st.error(f"❌ HTTP Error {he.code}")
+                except Exception as e:
+                    st.error(f"সাধারণ সমস্যা: {e}")
+
+    # --- লাইভ মেমোরি থেকে ডেটা ডিসপ্লে (টিক দিলে ডেটা আর হারাবে না) ---
+    if st.session_state['ai_output'] is not None:
+        data = st.session_state['ai_output']
+
+        st.markdown("---")
+        st.success("🎯 মেটাডেটা সফলভাবে জেনারেট এবং মেমোরিতে লক হয়েছে। নিচে নির্ভয়ে টিক মার্ক দিন!")
+
+        # 📺 ১. ইউটিউব ভিডিও সেকশন (প্রধান এবং বড় ভিউ)
+        st.error("📺 YouTube Video Deployment Hub")
+        col_t1, col_t2 = st.columns([2, 1])
+        with col_t1:
+            st.write("**AI Target Title (<100 Chars):**")
+            st.code(data["yt_title"], language="")
+        with col_t2:
+            st.write("**🎯 সার্চ Tags (ম্যাক্সিমাম কোয়ালিটি এবং ৫০০ ক্যারেক্টার পলিসি সেফ):**")
+            st.code(data["yt_tags"], language="")
+
+        st.write("**📝 YouTube Description Box (১ লাইন গ্যাপ এবং শেষে ব্র্যান্ড হ্যাশট্যাগসহ অটো-ফরম্যাটেড):**")
+        st.text_area("YouTube Copy Area:", value=data["yt_desc"], height=200)
+
+        st.markdown("---")
+
+        # 📱 ২. ফেসবুক, টিকটক এবং কন্টেন্ট গ্রিড
+        row2_c1, row2_c2, row2_c3 = st.columns(3)
+
+        with row2_c1:
+            st.warning("🔵 Facebook Post Hub")
+            st.write("**FB Text (Headline + Gap + Hashtags):**")
+            st.text_area("Facebook Copy Area:", value=data["fb_text"], height=250)
+
+        with row2_c2:
+            st.info("🎵 TikTok Dispatch Hub")
+            st.write("**TikTok Caption (Headline + Desc + Gap + Hashtags):**")
+            st.text_area("TikTok Copy Area:", value=data["tt_text"], height=250)
+
+        with row2_c3:
+            st.error("📊 YT Community Post & Poll")
+            st.write("**কমিউনিটি কন্টেন্ট:**")
+            st.text_area("Community Copy Area:", value=data["comm_post"], height=250)
+
+        # --- ৩. নিখুঁত পাবলিশিং চেকলিস্ট (রিলোড প্রবলেম ফিক্সড) ---
+        st.markdown("---")
+        st.subheader("🚨 লাইভ পাবলিশিং চেকলিস্ট (এখানে জাস্ট টিক মার্ক দিন)")
+
+        ch1, ch2, ch3, ch4, ch5 = st.columns(5)
+        ch1.checkbox("YouTube Video Done", key="chk_yt_v")
+        ch2.checkbox("YT Community Done", key="chk_yt_c")
+        ch3.checkbox("Facebook Post Done", key="chk_fb")
+        ch4.checkbox("TikTok Pushed", key="chk_tt")
+        ch5.checkbox("All Platforms Upload Completed ✅", key="chk_cms_all")
+
+# ----------------- 🔍 ট্যাব ২: প্রতিদ্বন্দী স্ক্র্যাপার -----------------
 with tab2:
     st.header("প্রতিদ্বন্দী ভিডিওর ভেতরের আসল Tags এবং Hashtags স্ক্র্যাপার")
-    keyword = st.text_input("সার্চ কিওয়ার্ডটি লিখুন:", placeholder="যেমন: বাজেট ২০২৬ বাংলাদেশ", key="tab2_kw")
-    max_results = st.slider("কয়টি প্রতিদ্বন্দী ভিডিও অ্যানালাইসিস করবেন?", 5, 20, 10)
+    keyword = st.text_input("সার্চ কিওয়ার্ডটি লিখুন:", placeholder="যেমন: বাজেট ২০২৬ বাংলাদেশ", key="tab2_kw")
+    max_results = st.slider("কয়টি প্রতিদ্বন্দী ভিডিও অ্যানালাইসিস করবেন?", 5, 20, 10)
 
     if st.button("SEO এনালাইসিস শুরু করুন 🚀", key="tab2_btn"):
-        if not api_key:
-            st.error("দয়া করে বাম পাশের সাইডবারে আপনার ইউটিউব API Key টি দিন।")
+        if not clean_api_key:
+            st.error("দয়া করে বাম পাশের সাইডবারে আপনার ইউটিউব Data API Key টি দিন।")
         elif not keyword:
-            st.warning("আগে একটি কিওয়ার্ড লিখুন!")
+            st.warning("আগে একটি কিওয়ার্ড লিখুন!")
         else:
             with st.spinner("ইউটিউব থেকে আসল Tags স্ক্র্যাপ করা হচ্ছে..."):
                 try:
-                    youtube = build('youtube', 'v3', developerKey=api_key)
+                    youtube = build('youtube', 'v3', developerKey=clean_api_key)
                     search_response = youtube.search().list(
                         q=keyword, part='snippet', maxResults=max_results, type='video', relevanceLanguage='bn'
                     ).execute()
-                    
+
                     video_ids = [item['id']['videoId'] for item in search_response.get('items', [])]
-                    
                     if not video_ids:
-                        st.warning("কোনো ভিডিও পাওয়া যায়নি।")
+                        st.warning("কোনো ভিডিও পাওয়া যায়নি।")
                     else:
                         video_response = youtube.videos().list(id=",".join(video_ids), part='snippet').execute()
                         titles = []
                         all_hashtags_t2 = []
                         all_video_tags = []
-                        
+
                         for item in video_response.get('items', []):
                             snippet_data = item.get('snippet', {})
                             titles.append(snippet_data.get('title', ''))
@@ -179,7 +318,7 @@ with tab2:
                             all_video_tags.extend(tags)
                             hashtags = re.findall(r"#\w+", snippet_data.get('description', ''))
                             all_hashtags_t2.extend(hashtags)
-                        
+
                         col1, col2 = st.columns(2)
                         with col1:
                             st.subheader("🔥 প্রতিদ্বন্দী চ্যানেলগুলোর টাইটেল ট্রেন্ড")
@@ -191,14 +330,12 @@ with tab2:
                                 hashtag_counts = Counter(all_hashtags_t2)
                                 for tag, count in hashtag_counts.most_common(10):
                                     st.write(f" `{tag}` ({count} বার)")
-                        
+
                         st.markdown("---")
                         st.subheader("🎯 কপি করার জন্য আসল ভিডিও ট্যাগ")
                         if all_video_tags:
                             tag_counts = Counter(all_video_tags)
                             top_tags = [tag for tag, count in tag_counts.most_common(20)]
                             st.text_area("Copy-Paste করার জন্য রেদি ট্যাগসমূহ:", value=", ".join(top_tags), height=120)
-                        else:
-                            st.info("কোনো ট্যাগ খুঁজে পাওয়া যায়নি।")
                 except Exception as e:
-                    st.error(f"দুঃখিত, একটি সমস্যা হয়েছে: {e}")
+                    st.error(f"দুঃখিত, একটি সমস্যা হয়েছে: {e}")
