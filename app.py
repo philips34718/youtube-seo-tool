@@ -27,7 +27,7 @@ if using_groq:
     gemini_key = ""
     model_type = st.sidebar.selectbox(
         "🤖 Groq Model সিলেক্ট করুন:",
-        ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
+        ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant"]
     )
     st.sidebar.caption("ফ্রি অ্যাকাউন্টে কার্ড লাগবে না। console.groq.com → API Keys থেকে কী নিন।")
 else:
@@ -47,13 +47,52 @@ clean_api_key = api_key.strip() if api_key else ""
 clean_model_type = model_type.strip()
 
 
+def detect_primary_language(text):
+    """
+    হেডলাইন + বিবরণ মূলত বাংলা না ইংরেজি — সহজ ইউনিকোড-ভিত্তিক হিউরিস্টিক দিয়ে বের করা।
+    এর ভিত্তিতে AI কে বলে দেওয়া হবে কোন দেশের অডিয়েন্সের জন্য অপ্টিমাইজ করতে হবে।
+    """
+    if not text or not text.strip():
+        return "English"
+    bengali_chars = len(re.findall(r'[\u0980-\u09FF]', text))
+    letter_chars = len(re.findall(r'[^\s\d\W]', text, flags=re.UNICODE))
+    if letter_chars == 0:
+        return "English"
+    return "Bengali" if (bengali_chars / letter_chars) > 0.3 else "English"
+
+
+def format_hashtags(raw_text):
+    """
+    AI থেকে আসা hashtag টেক্সট ক্লিন করে নিশ্চিত করে:
+    - প্রতিটি ট্যাগের শুরুতে # আছে (এটাই আগের বাগ ফিক্স)
+    - স্পেস/পাংচুয়েশন বাদ, ১০০% লোয়ারকেস
+    - ডুপ্লিকেট ট্যাগ থাকবে না
+    """
+    if not raw_text:
+        return ""
+    raw_tags = re.split(r"[,\s|]+", raw_text.strip())
+    clean_tags = []
+    seen = set()
+    for tag in raw_tags:
+        tag = tag.strip().lstrip("#")
+        # \w বাংলা স্বরচিহ্ন/matra (া ি ী ৃ ো ৌ ইত্যাদি) ধরে না, তাই বাংলা ইউনিকোড ব্লক আলাদাভাবে allow করা হলো
+        tag = re.sub(r"[^\w\u0980-\u09FF]", "", tag, flags=re.UNICODE)
+        if not tag:
+            continue
+        tag = f"#{tag.lower()}"
+        if tag not in seen:
+            seen.add(tag)
+            clean_tags.append(tag)
+    return " ".join(clean_tags)
+
+
 def call_ai(prompt: str) -> str:
     """
     Groq অথবা Gemini এ প্রম্পট পাঠিয়ে টেক্সট রেসপন্স আনে।
     """
     max_retries = 3
     
-    # Cloudflare 403 Forbidden এরর এড়াতে ব্রাউজার হেডার যোগ করা হয়েছে
+    # Cloudflare 403 Forbidden এরর এড়াতে ব্রাউজার হেডার যোগ করা হয়েছে
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
     if using_groq:
@@ -131,13 +170,25 @@ with tab1:
             st.error("দয়া করে বাম পাশের সাইডবারে আপনার Gemini AI Key টি দিন।")
         else:
             with st.spinner(f"AI ({clean_model_type}) আপনার নিউজ অ্যানালাইসিস করছে..."):
+                detected_lang = detect_primary_language(f"{headline} {given_desc}")
+
                 prompt = f"""
                 Act as an elite YouTube News SEO Specialist and Google News SEO Expert for 'The Business Standard (TBS)'.
                 Analyze the provided headline and script context to generate hyper-targeted, high-CTR metadata assets for maximum reach.
 
-                CRITICAL POLICY SAFETY RULE: Do NOT include generic, trending but completely irrelevant news tags (such as Trump, Iran, Ukraine, war, etc.) if they are completely unrelated to this local news piece. Misleading tags cause YouTube community guidelines strikes and account termination. Keep keywords hyper-focused ONLY on the actual entities present in the news context.
+                Detected Primary Language of this content: {detected_lang}
 
-                Current Context: Year 2026 Search Trends. All hashtags MUST be 100% lowercase with no spaces.
+                AUDIENCE TARGETING RULE (follow strictly):
+                - If Detected Primary Language is "Bengali": optimize every hashtag and keyword specifically for a BANGLADESHI audience. Use local entity names, Bangladeshi location/political/cultural context, and terms Bangladeshi viewers actually search for on YouTube/Google.
+                - If Detected Primary Language is "English": optimize every hashtag and keyword specifically for a USA / international English-speaking audience. Use globally searched English entities and US-relevant search phrasing.
+
+                CRITICAL POLICY SAFETY RULES (follow strictly — violating these risks channel strikes or termination):
+                1. Do NOT include generic, trending but completely irrelevant tags (such as Trump, Iran, Ukraine, war, etc.) if they are unrelated to this specific news piece. Misleading tags cause YouTube community guidelines strikes.
+                2. Do NOT include any keyword or hashtag that is hateful, discriminatory, sexually suggestive, glorifies violence, promotes self-harm, spreads unverified misinformation, defames a real person/group beyond what the facts support, or is otherwise likely to be flagged, demonetized, or publicly criticized.
+                3. Do NOT use exaggerated or clickbait phrasing that misrepresents what is actually stated in the News Description below.
+                4. Keep every keyword/hashtag hyper-focused ONLY on entities and facts actually present in the news context — no speculation.
+
+                Current Context: Year 2026 Search Trends.
 
                 News Headline: {headline}
                 News Description: {given_desc}
@@ -146,8 +197,8 @@ with tab1:
                 Strict Output Rules:
                 Your response must contain these exact section markers:
                 [SUFFIX]: 2 or 3 clean, high-intent English keywords/entities separated by pipes based on context (e.g., | Dhanmondi 32 | Jamaat Rally | Latest News).
-                [CONTEXT_HASHTAGS]: 2 or 3 completely lowercase viral hashtags separated by spaces related specifically to the news context (DO NOT include brand names like tbs).
-                [KEYWORDS]: Generate a massive list of 20 high-quality, highly searched viral semantic keywords/tags separated by commas. Maximize the quantity to fill the YouTube tag box efficiently while staying 100% relevant to the entities in the text.
+                [CONTEXT_HASHTAGS]: 2 or 3 viral hashtags relevant to the news context and the target audience defined above. EACH hashtag MUST start with the # symbol, be fully lowercase, contain no spaces or punctuation (merge multi-word concepts into one token, e.g. #dhanmondi32), and be separated from each other by a single space. DO NOT include brand hashtags like tbs here.
+                [KEYWORDS]: Generate a massive list of 20 high-quality, highly searched, audience-relevant semantic keywords/tags separated by commas. Maximize quantity to fill the YouTube tag box while staying 100% relevant and policy-safe.
                 [COMMUNITY]: A catchy text for YouTube Community Post with hook question, summary, and a 4-option Poll suggestion.
                 [FB_TITLE]: A punchy, click-friendly title optimized specifically for Facebook audience.
                 """
@@ -166,7 +217,8 @@ with tab1:
                             return ""
 
                     ai_suffix = extract_section("SUFFIX", ai_response)
-                    context_hashtags = extract_section("CONTEXT_HASHTAGS", ai_response)
+                    context_hashtags_raw = extract_section("CONTEXT_HASHTAGS", ai_response)
+                    context_hashtags = format_hashtags(context_hashtags_raw)
                     ai_keywords = extract_section("KEYWORDS", ai_response)
                     comm_post = extract_section("COMMUNITY", ai_response)
                     fb_title = extract_section("FB_TITLE", ai_response)
@@ -177,7 +229,7 @@ with tab1:
 
                     brand_hashtags = "#tbsnews #thebusinessstandard #tbs"
                     if context_hashtags:
-                        final_shared_hashtags = f"{context_hashtags.lower()} {brand_hashtags}"
+                        final_shared_hashtags = f"{context_hashtags} {brand_hashtags}"
                     else:
                         final_shared_hashtags = brand_hashtags
 
@@ -223,17 +275,17 @@ with tab1:
                         else:
                             error_msg = str(err_body)
                     except:
-                        error_msg = "সার্ভার থেকে কোনো অতিরিক্ত মেসেজ পাওয়া যায়নি।"
+                        error_msg = "সার্ভার থেকে কোনো অতিরিক্ত মেসেজ পাওয়া যায়নি।"
                     
                     st.error(f"❌ AI সার্ভার এরর এসেছে! [Error Code: {he.code}]")
-                    st.info(f"📋 সার্ভার থেকে পাওয়া আসল কারণ: {error_msg}")
+                    st.info(f"📋 সার্ভার থেকে পাওয়া আসল কারণ: {error_msg}")
                 except Exception as e:
                     st.error(f"সাধারণ সমস্যা: {e}")
 
     if st.session_state['ai_output'] is not None:
         data = st.session_state['ai_output']
         st.markdown("---")
-        st.success("🎯 মেটাডেটা সফলভাবে জেনারেট হয়েছে।")
+        st.success("🎯 মেটাডেটা সফলভাবে জেনারেট হয়েছে।")
 
         st.error("📺 YouTube Video Deployment Hub")
         col_t1, col_t2 = st.columns([2, 1])
@@ -270,7 +322,7 @@ with tab2:
 
     if st.button("SEO এনালাইসিস শুরু করুন 🚀", key="tab2_btn"):
         if not clean_api_key:
-            st.error("❌ এই ট্যাবটি ব্যবহারের জন্য সাইডবারে অবশ্যই 'ইউটিউব Data API Key' দিতে হবে। গুগলের ৪MD৩ এরর এড়াতে এটি বাধ্যতামূলক।")
+            st.error("❌ এই ট্যাবটি ব্যবহারের জন্য সাইডবারে অবশ্যই 'ইউটিউব Data API Key' দিতে হবে। গুগলের ৪MD৩ এরর এড়াতে এটি বাধ্যতামূলক।")
         elif not keyword:
             st.warning("আগে একটি কিওয়ার্ড লিখুন!")
         else:
